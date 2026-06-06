@@ -1,0 +1,6 @@
+{
+  "name": "SimGate Gateway",
+  "description": "Turn an Android phone into an SMS Gateway, polling a remote Supabase backend and handling high-throughput dual-SIM actions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

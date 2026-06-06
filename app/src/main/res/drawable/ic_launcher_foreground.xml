@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Shield Frame representing Secure Gateway -->
+    <path
+        android:fillColor="#16A34A"
+        android:pathData="M54,16 C39.5,16 30.5,22 30.5,22 L30.5,56 C30.5,73 45,86.5 54,92 C63,86.5 77.5,73 77.5,56 L77.5,22 C77.5,22 68.5,16 54,16 Z" />
+    <path
+        android:fillColor="#0F171E"
+        android:pathData="M54,23 C43.2,23 36.5,27.5 36.5,27.5 L36.5,56 C36.5,68.8 47.3,79.5 54,84 C60.7,79.5 71.5,68.8 71.5,56 L71.5,27.5 C71.5,27.5 64.8,23 54,23 Z" />
+    <!-- Telemetry Signal Bars in Center representing Gateway connection -->
+    <path
+        android:fillColor="#16A34A"
+        android:pathData="M42,62 h4 v-8 h-4 z M48,62 h4 v-14 h-4 z M54,62 h4 v-20 h-4 z M60,62 h4 v-26 h-4 z" />
+</vector>
