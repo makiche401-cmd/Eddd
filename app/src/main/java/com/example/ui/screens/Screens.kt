@@ -953,6 +953,7 @@ fun PermissionsScreen(
     var hasReadSms by remember { mutableStateOf(false) }
     var hasReceiveSms by remember { mutableStateOf(false) }
     var hasPhoneState by remember { mutableStateOf(false) }
+    var hasCamera by remember { mutableStateOf(false) }
     var hasNotif by remember { mutableStateOf(false) }
     var isBatteryOptDisabled by remember { mutableStateOf(false) }
     var hasAutoStartConfigured by remember { mutableStateOf(viewModel.prefsManager.hasAutoStartConfigured) }
@@ -964,6 +965,7 @@ fun PermissionsScreen(
         hasReadSms = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
         hasReceiveSms = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
         hasPhoneState = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+        hasCamera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         
         hasNotif = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -992,7 +994,7 @@ fun PermissionsScreen(
         checkPermissions()
     }
 
-    val requirementCompleted = hasSendSms && hasReadSms && hasReceiveSms && hasPhoneState && hasNotif && isBatteryOptDisabled
+    val requirementCompleted = hasSendSms && hasReadSms && hasReceiveSms && hasPhoneState && hasCamera && hasNotif && isBatteryOptDisabled
 
     Box(
         modifier = modifier
@@ -1188,6 +1190,20 @@ fun PermissionsScreen(
 
                 item {
                     PermissionRowItem(
+                        title = "Camera Access",
+                        subtitle = "Required to scan the setup QR codes to pair your device instantly",
+                        icon = Icons.Default.CameraAlt,
+                        isGranted = hasCamera,
+                        onClick = {
+                            if (!hasCamera) {
+                                requestPermissionLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
                         title = "Battery Optimization",
                         subtitle = "Prevent the system from killing the gateway in the background",
                         icon = Icons.Default.BatteryChargingFull,
@@ -1279,7 +1295,8 @@ fun PermissionsScreen(
                                 Manifest.permission.SEND_SMS,
                                 Manifest.permission.READ_SMS,
                                 Manifest.permission.RECEIVE_SMS,
-                                Manifest.permission.READ_PHONE_STATE
+                                Manifest.permission.READ_PHONE_STATE,
+                                Manifest.permission.CAMERA
                             )
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 permsList.add(Manifest.permission.POST_NOTIFICATIONS)
