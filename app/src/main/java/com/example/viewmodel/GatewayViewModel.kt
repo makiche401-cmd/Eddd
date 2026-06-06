@@ -58,6 +58,7 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
     // UI Loading states
     val isConnecting = mutableStateOf(false)
     val connectError = mutableStateOf<String?>(null)
+    val isPairSuccess = mutableStateOf(false)
 
     init {
         // Schedule alarm watchdog if running
@@ -113,15 +114,27 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
             isConnecting.value = true
             connectError.value = null
             
+            // Check for real internet connection
+            if (!com.example.gateway.NetworkHelper.hasRealInternetConnection(context)) {
+                connectError.value = "No internet connection. Please connect to the internet."
+                isConnecting.value = false
+                return@launch
+            }
+            
             // Call connective verify on post /device-connect inside Repository
             val success = repository.connectDevice(deviceId, deviceToken, apiBase)
             isConnecting.value = false
             
             if (success) {
-                _isPaired.value = true
+                isPairSuccess.value = true
                 onSuccess()
                 // Auto-start background GatewayService immediately on success
                 startService()
+                
+                // Allow user to see "Connected" success screen before loading the dashboard automatically
+                kotlinx.coroutines.delay(1800)
+                _isPaired.value = true
+                isPairSuccess.value = false
             } else {
                 connectError.value = "Failed to connect to backend Edge Function. Verify credentials."
             }
@@ -196,6 +209,22 @@ class GatewayViewModel(application: Application) : AndroidViewModel(application)
                 repository.insertMessage(testMsg)
                 Toast.makeText(context, "Failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    fun forceSync() {
+        if (!isServiceRunning.value) {
+            Toast.makeText(context, "Start Gateway Service first to sync", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(context, GatewayService::class.java).apply {
+            action = GatewayService.ACTION_FORCE_SYNC
+        }
+        try {
+            ContextCompat.startForegroundService(context, intent)
+            Toast.makeText(context, "Force syncing SMS outbox...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to force sync", e)
         }
     }
 

@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -72,22 +73,94 @@ fun OnboardingScreen(
     var apiBase by remember { mutableStateOf("https://abjwmllylfdbcmhfqwvk.supabase.co/functions/v1") }
     var showToken by remember { mutableStateOf(false) }
     var isQrScannerOpen by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
 
     val connectError by viewModel.connectError
     val isConnecting by viewModel.isConnecting
+    val isPairSuccess by viewModel.isPairSuccess
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(CosmicDark)
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 32.dp)
-        ) {
+        if (isPairSuccess) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CosmicDark)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = CosmicCard),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(2.dp, VibrantGreen),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(VibrantGreen.copy(alpha = 0.15f), shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                tint = VibrantGreen,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                        
+                        Text(
+                            text = "Device Connected!",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        Text(
+                            text = "Configuring parameters and launching background service daemon...",
+                            color = MediumGray,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        CircularProgressIndicator(
+                            color = VibrantGreen,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Text(
+                            text = "Entering Home Dashboard...",
+                            color = VibrantGreen,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
             // Header Shield Banner
             item {
                 Row(
@@ -144,7 +217,7 @@ fun OnboardingScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Enter the Device ID and Device Token provided by your dashboard.",
+                            text = "Enter the Device ID and Device Token provided by your dashboard on simresend.web.app.",
                             color = MediumGray,
                             fontSize = 12.sp
                         )
@@ -267,26 +340,89 @@ fun OnboardingScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = CosmicCard),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, CosmicGreenBorder.copy(alpha = 0.5f))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info Icon",
+                                tint = VibrantGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "How to get Device ID & Token?",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        
                         Text(
-                            text = "How to get Device ID & Token?",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
+                            text = "To register, manage devices, and retrieve your credentials, please use the SimResend Web platform.",
+                            color = MediumGray,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
                         )
+
                         val steps = listOf(
-                            "1. Login to your dashboard",
-                            "2. Go to Devices",
-                            "3. Click \"Add Device\"",
-                            "4. Copy Device ID and Token"
+                            "1. Go to https://simresend.web.app",
+                            "2. Register or Login to your dashboard",
+                            "3. Click \"Add Device\" under SimGate Gateway",
+                            "4. Copy your unique Device ID and Token here"
                         )
-                        steps.forEach { step ->
-                            Text(text = step, color = MediumGray, fontSize = 12.sp)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            steps.forEach { step ->
+                                Text(
+                                    text = step,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                        Button(
+                            onClick = {
+                                try {
+                                    uriHandler.openUri("https://simresend.web.app")
+                                } catch (e: Exception) {
+                                    Log.e("Screens", "Failed to open gateway URL", e)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = VibrantGreen.copy(alpha = 0.15f)),
+                            border = BorderStroke(1.dp, VibrantGreen),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Launch,
+                                    contentDescription = "Open Web Dashboard",
+                                    tint = VibrantGreen,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Open simresend.web.app",
+                                    color = VibrantGreen,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -327,6 +463,59 @@ fun OnboardingScreen(
                     }
                 }
             }
+
+            // Terms of Service and Privacy Policy Link Card
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "By pairing your device, you agree to our software terms.",
+                        color = MediumGray,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { showTermsDialog = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text(
+                                text = "Terms of Service",
+                                color = VibrantGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = "•",
+                            color = MediumGray,
+                            fontSize = 12.sp
+                        )
+                        TextButton(
+                            onClick = { showPrivacyDialog = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Text(
+                                text = "Privacy Policy",
+                                color = VibrantGreen,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
         }
 
         // Expanded QR Scanner Dialog
@@ -341,7 +530,76 @@ fun OnboardingScreen(
                 }
             )
         }
+
+        if (showTermsDialog) {
+            TermsAndConditionsDialog(onDismissRequest = { showTermsDialog = false })
+        }
+
+        if (showPrivacyDialog) {
+            PrivacyPolicyDialog(onDismissRequest = { showPrivacyDialog = false })
+        }
     }
+}
+
+@Composable
+fun AutoStartHelperDialog(
+    onDismissRequest: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Autorenew,
+                    contentDescription = null,
+                    tint = VibrantGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Auto Start Settings",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "To ensure the SimGate gateway background daemon remains active after device reboots, please enable the Auto-start settings of this application.",
+                    color = MediumGray,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+                Text(
+                    text = "On brand-specific ROMs (such as MIUI/Xiaomi, Oppo, Vivo, Samsung), system policy disables third-party boot activities. Enabling Autostart is required to keep your SMS dispatcher completely stable.",
+                    color = MediumGray,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onOpenSettings,
+                colors = ButtonDefaults.buttonColors(containerColor = VibrantGreen),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Open Settings", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Cancel", color = MediumGray)
+            }
+        },
+        containerColor = CosmicCard,
+        shape = RoundedCornerShape(16.dp)
+    )
 }
 
 @Composable
@@ -357,6 +615,9 @@ fun PermissionsScreen(
     var hasPhoneState by remember { mutableStateOf(false) }
     var hasNotif by remember { mutableStateOf(false) }
     var isBatteryOptDisabled by remember { mutableStateOf(false) }
+    var hasAutoStartConfigured by remember { mutableStateOf(false) }
+
+    var showAutoStartDialog by remember { mutableStateOf(false) }
 
     val checkPermissions = {
         hasSendSms = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
@@ -395,114 +656,504 @@ fun PermissionsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(CosmicDark)
-            .padding(20.dp),
-        contentAlignment = Alignment.Center
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = CosmicCard),
-            shape = RoundedCornerShape(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Header block matching screen style exactly
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "System Permissions",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "SimGate requires the following system permissions to transmit SMS, process reception queues, and bypass OS thermal/battery throttling.",
-                    color = MediumGray,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // Permission checklists
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                IconButton(
+                    onClick = onContinue,
+                    modifier = Modifier.size(44.dp)
                 ) {
-                    PermissionRowItem(label = "SEND_SMS System Permission", isGranted = hasSendSms)
-                    PermissionRowItem(label = "READ_SMS System Permission", isGranted = hasReadSms)
-                    PermissionRowItem(label = "RECEIVE_SMS System Permission", isGranted = hasReceiveSms)
-                    PermissionRowItem(label = "READ_PHONE_STATE (SIM Slot query)", isGranted = hasPhoneState)
-                    PermissionRowItem(label = "POST_NOTIFICATIONS (Android 13+ status bar)", isGranted = hasNotif)
-                    PermissionRowItem(label = "Battery Optimization Disabled (Exempted)", isGranted = isBatteryOptDisabled)
-                    PermissionRowItem(label = "Auto Start Enabled (Background state persistence)", isGranted = true) // Simulated instruction row
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Grant Permissions",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Required to run SimGate Gateway",
+                        color = MediumGray,
+                        fontSize = 12.sp
+                    )
+                }
 
-                // Grant Button
+                // Green outer status badge indicator
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(VibrantGreen.copy(alpha = 0.15f), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Shield,
+                        contentDescription = "Shield Indicator",
+                        tint = VibrantGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Scrollable Permissions List
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                // Warning/Info Alert card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E16)),
+                        border = BorderStroke(1.dp, VibrantGreen.copy(alpha = 0.35f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .background(VibrantGreen.copy(alpha = 0.15f), shape = CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = VibrantGreen,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "All permissions are required",
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "SimGate needs these permissions to send and receive SMS reliably in the background.",
+                                    color = MediumGray,
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Section title
+                item {
+                    Text(
+                        text = "Required Permissions",
+                        color = VibrantGreen,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
+                // List of permissions
+                item {
+                    PermissionRowItem(
+                        title = "Send SMS",
+                        subtitle = "Allows the app to send SMS messages",
+                        icon = Icons.Default.Sms,
+                        isGranted = hasSendSms,
+                        onClick = {
+                            if (!hasSendSms) {
+                                requestPermissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
+                        title = "Read SMS",
+                        subtitle = "Allows the app to read SMS messages for history and status",
+                        icon = Icons.Default.Inbox,
+                        isGranted = hasReadSms,
+                        onClick = {
+                            if (!hasReadSms) {
+                                requestPermissionLauncher.launch(arrayOf(Manifest.permission.READ_SMS))
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
+                        title = "Receive SMS",
+                        subtitle = "Allows the app to receive incoming SMS messages",
+                        icon = Icons.Default.Comment,
+                        isGranted = hasReceiveSms,
+                        onClick = {
+                            if (!hasReceiveSms) {
+                                requestPermissionLauncher.launch(arrayOf(Manifest.permission.RECEIVE_SMS))
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
+                        title = "Post Notifications",
+                        subtitle = "Needed to show foreground service notifications",
+                        icon = Icons.Default.Notifications,
+                        isGranted = hasNotif,
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotif) {
+                                requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
+                        title = "Read Phone State",
+                        subtitle = "Used to get signal strength and network information",
+                        icon = Icons.Default.Phone,
+                        isGranted = hasPhoneState,
+                        onClick = {
+                            if (!hasPhoneState) {
+                                requestPermissionLauncher.launch(arrayOf(Manifest.permission.READ_PHONE_STATE))
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
+                        title = "Battery Optimization",
+                        subtitle = "Prevent the system from killing the gateway in the background",
+                        icon = Icons.Default.BatteryChargingFull,
+                        isGranted = isBatteryOptDisabled,
+                        onClick = {
+                            if (!isBatteryOptDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                try {
+                                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).let {
+                                        context.startActivity(it)
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    PermissionRowItem(
+                        title = "Auto Start on Boot",
+                        subtitle = "Allows the gateway to start automatically after reboot",
+                        icon = Icons.Default.PowerSettingsNew,
+                        isGranted = hasAutoStartConfigured,
+                        onClick = {
+                            showAutoStartDialog = true
+                        }
+                    )
+                }
+
+                // Info Box at the end of the scrollable area
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = CosmicCard.copy(alpha = 0.4f)),
+                        border = BorderStroke(1.dp, CosmicGreenBorder),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = VibrantGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Why we need these permissions?",
+                                    color = VibrantGreen,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "These permissions are essential for SMS operations, maintaining reliable connection, and running the gateway in the background.",
+                                    color = MediumGray,
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fixed Sticky Bottom Actions
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Grant All or Continue Button
                 if (!requirementCompleted) {
                     Button(
                         onClick = {
+                            // Request standard system permissions together
                             val permsList = mutableListOf(
                                 Manifest.permission.SEND_SMS,
                                 Manifest.permission.READ_SMS,
                                 Manifest.permission.RECEIVE_SMS,
-                                Manifest.permission.READ_PHONE_STATE,
-                                Manifest.permission.CAMERA
+                                Manifest.permission.READ_PHONE_STATE
                             )
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 permsList.add(Manifest.permission.POST_NOTIFICATIONS)
                             }
                             requestPermissionLauncher.launch(permsList.toTypedArray())
 
-                            // Guides user to Battery Optimizations setting
+                            // Attempt battery check if applicable
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !isBatteryOptDisabled) {
-                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
+                                try {
+                                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Log.e("Screens", "Failed simple battery optimization call", e)
                                 }
-                                context.startActivity(intent)
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = VibrantGreen),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("grant_all_button"),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Grant System Permissions", color = Color.White, fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Shield,
+                                contentDescription = "Shield Icon",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Grant All Permissions",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 } else {
                     Button(
                         onClick = onContinue,
                         colors = ButtonDefaults.buttonColors(containerColor = VibrantGreen),
-                        modifier = Modifier.fillMaxWidth().height(48.dp).testTag("continue_to_app_button")
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("continue_to_app_button"),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Continue to Gateway", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Continue to Gateway",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
+
+                // Explicit link to Open Permission Settings fallback
+                TextButton(
+                    onClick = {
+                        try {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Could not open system application settings", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(
+                        text = "Open Permission Settings",
+                        color = VibrantGreen,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
+        }
+
+        // Dialog for Auto-Start Helper
+        if (showAutoStartDialog) {
+            AutoStartHelperDialog(
+                onDismissRequest = {
+                    showAutoStartDialog = false
+                },
+                onOpenSettings = {
+                    showAutoStartDialog = false
+                    hasAutoStartConfigured = true
+                    try {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Settings opened", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
         }
     }
 }
 
 @Composable
-fun PermissionRowItem(label: String, isGranted: Boolean) {
-    Row(
+fun PermissionRowItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isGranted: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF161B22), shape = RoundedCornerShape(8.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF131A22)),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isGranted) CosmicGreenBorder.copy(alpha = 0.5f) else Color(0xFF242F3D).copy(alpha = 0.5f)
+        )
     ) {
-        Icon(
-            imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Cancel,
-            contentDescription = if (isGranted) "Granted" else "Pending",
-            tint = if (isGranted) VibrantGreen else Color.Red,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (isGranted) Color.White else MediumGray
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left circular icon container
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(
+                        color = if (isGranted) VibrantGreen.copy(alpha = 0.12f) else Color(0xFF242F3D),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isGranted) VibrantGreen else MediumGray,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Text column
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle,
+                    color = MediumGray,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Status Badge Column or Row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (isGranted) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Granted",
+                        tint = VibrantGreen,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "Granted",
+                        color = VibrantGreen,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Not granted",
+                        tint = Color(0xFFFBBF24),
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "Not granted",
+                        color = Color(0xFFFBBF24),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MediumGray,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
     }
 }
 
@@ -615,32 +1266,66 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            val statusTitle: String
+                            val statusDesc: String
+                            val statusIcon: ImageVector
+                            val statusIconColor: Color
+                            val statusIconBg: Color
+                            val statusDotColor: Color
+
+                            if (!stateIsRunning) {
+                                statusTitle = "Stopped"
+                                statusDesc = "Gateway is currently stopped"
+                                statusIcon = Icons.Default.Cancel
+                                statusIconColor = Color.Red
+                                statusIconBg = Color(0xFF321F20)
+                                statusDotColor = Color.Red
+                            } else if (stateOnlineStatus == "Reconnecting") {
+                                statusTitle = "Reconnecting..."
+                                statusDesc = "Network lost. Reconnecting until established..."
+                                statusIcon = Icons.Default.Refresh
+                                statusIconColor = Color(0xFFF59E0B)
+                                statusIconBg = Color(0xFF452A10)
+                                statusDotColor = Color(0xFFF59E0B)
+                            } else if (stateOnlineStatus == "Offline") {
+                                statusTitle = "Gateway Paused"
+                                statusDesc = "The gateway has been paused temporarily."
+                                statusIcon = Icons.Default.Pause
+                                statusIconColor = Color.White
+                                statusIconBg = Color(0xFF3F3F46)
+                                statusDotColor = Color.Gray
+                            } else {
+                                statusTitle = "Connected"
+                                statusDesc = "Gateway running and listening to queues"
+                                statusIcon = Icons.Default.CheckCircle
+                                statusIconColor = VibrantGreen
+                                statusIconBg = Color(0xFF1A3324)
+                                statusDotColor = VibrantGreen
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(
-                                        if (stateIsRunning) Color(0xFF1A3324) else Color(0xFF321F20),
-                                        shape = CircleShape
-                                    ),
+                                    .background(statusIconBg, shape = CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (stateIsRunning) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                    imageVector = statusIcon,
                                     contentDescription = "Status",
-                                    tint = if (stateIsRunning) VibrantGreen else Color.Red,
+                                    tint = statusIconColor,
                                     modifier = Modifier.size(26.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = if (stateIsRunning) "Connected" else "Disconnected",
+                                    text = statusTitle,
                                     color = Color.White,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = if (stateIsRunning) "Gateway is running and connected successfully" else "Gateway is currently stopped",
+                                    text = statusDesc,
                                     color = MediumGray,
                                     fontSize = 11.sp
                                 )
@@ -649,10 +1334,7 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(8.dp)
-                                            .background(
-                                                if (stateIsRunning) VibrantGreen else Color.Red,
-                                                shape = CircleShape
-                                            )
+                                            .background(statusDotColor, shape = CircleShape)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
@@ -856,7 +1538,7 @@ fun HomeScreen(
                             containerColor = Color(0xFF374151),
                             tint = Color.White,
                             onClick = {
-                                Toast.makeText(context, "Invoking outbox flush...", Toast.LENGTH_SHORT).show()
+                                viewModel.forceSync()
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -1241,11 +1923,22 @@ fun SimScreen(
                 }
             } else {
                 simList.forEach { sim ->
+                    val isSelected = (currentPref == "SIM_1" && sim.slot == 0) || (currentPref == "SIM_2" && sim.slot == 1)
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = CosmicCard),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val targetPref = if (sim.slot == 0) "SIM_1" else if (sim.slot == 1) "SIM_2" else "AUTO"
+                                viewModel.setSimPreference(targetPref)
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) Color(0xFF14532D).copy(alpha = 0.4f) else CosmicCard
+                        ),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color(0xFF30363D))
+                        border = BorderStroke(
+                            width = if (isSelected) 2.dp else 1.dp,
+                            color = if (isSelected) VibrantGreen else Color(0xFF30363D)
+                        )
                     ) {
                         Row(
                             modifier = Modifier
@@ -1256,10 +1949,14 @@ fun SimScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .background(Color(0xFF161B22), shape = CircleShape),
+                                    .background(if (isSelected) VibrantGreen.copy(alpha = 0.2f) else Color(0xFF161B22), shape = CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.SimCard, "Sim", tint = VibrantGreen)
+                                Icon(
+                                    imageVector = Icons.Default.SimCard,
+                                    contentDescription = "Sim",
+                                    tint = if (isSelected) VibrantGreen else Color.White
+                                )
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
@@ -1268,12 +1965,15 @@ fun SimScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Slot Card #${sim.slot + 1}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    val activeLabel = if (isSelected) " (ACTIVE ROUTE)" else ""
+                                    Text("Slot Card #${sim.slot + 1}$activeLabel", color = if (isSelected) VibrantGreen else Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     Text("SubID: ${sim.subId}", color = VibrantGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Text("Carrier: ${sim.carrier}", color = MediumGray, fontSize = 12.sp)
                                 if (sim.number.isNotBlank()) {
                                     Text("Phone: ${sim.number}", color = Color.White, fontSize = 12.sp)
+                                } else {
+                                    Text("Phone: (No phone number reported by SIM card)", color = MediumGray, fontSize = 11.sp)
                                 }
                             }
                         }
@@ -1314,6 +2014,8 @@ fun SettingsScreen(
     var showPollDialog by remember { mutableStateOf(false) }
     var showHbDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
 
     val maskedToken = if (deviceToken.length > 6) {
         "dtk_" + "*".repeat(deviceToken.length - 4)
@@ -1874,6 +2576,34 @@ fun SettingsScreen(
                             Icon(Icons.Default.KeyboardArrowRight, null, tint = MediumGray)
                         }
                     )
+
+                    HorizontalDivider(color = Color(0xFF1E293B), thickness = 0.5.dp)
+
+                    // Terms and Conditions
+                    SettingsItemRow(
+                        icon = Icons.Default.MenuBook,
+                        iconColor = VibrantGreen,
+                        title = "Terms & Conditions",
+                        subtitle = "Detailed user & gateway services agreement",
+                        onClick = { showTermsDialog = true },
+                        rightContent = {
+                            Icon(Icons.Default.KeyboardArrowRight, null, tint = MediumGray)
+                        }
+                    )
+
+                    HorizontalDivider(color = Color(0xFF1E293B), thickness = 0.5.dp)
+
+                    // Privacy Policy
+                    SettingsItemRow(
+                        icon = Icons.Default.Lock,
+                        iconColor = VibrantGreen,
+                        title = "Privacy Policy",
+                        subtitle = "Data processing & security practices",
+                        onClick = { showPrivacyDialog = true },
+                        rightContent = {
+                            Icon(Icons.Default.KeyboardArrowRight, null, tint = MediumGray)
+                        }
+                    )
                 }
             }
         }
@@ -2007,6 +2737,14 @@ fun SettingsScreen(
                     }
                 }
             )
+        }
+
+        if (showTermsDialog) {
+            TermsAndConditionsDialog(onDismissRequest = { showTermsDialog = false })
+        }
+
+        if (showPrivacyDialog) {
+            PrivacyPolicyDialog(onDismissRequest = { showPrivacyDialog = false })
         }
     }
 }

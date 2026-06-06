@@ -1,7 +1,9 @@
 package com.example.data.repository
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import com.example.R
 import com.example.data.PrefsManager
 import com.example.data.api.*
 import com.example.data.database.*
@@ -156,6 +158,11 @@ class GatewayRepository(
         val service = supabaseService ?: return@withContext
         val now = System.currentTimeMillis()
 
+        var successes = 0
+        var failures = 0
+        var lastSuccessDetails = ""
+        var lastFailureDetails = ""
+
         for (event in events) {
             if (event.nextRetryAt > now) continue
 
@@ -191,6 +198,8 @@ class GatewayRepository(
             if (success) {
                 outboxEventDao.deleteEvent(event)
                 Log.i(TAG, "Successfully synced outbox event ID: ${event.id}")
+                successes++
+                lastSuccessDetails = event.endpoint
             } else {
                 val nextAttempts = event.attempts + 1
                 val delayMs = when (nextAttempts) {
@@ -205,7 +214,49 @@ class GatewayRepository(
                 )
                 outboxEventDao.updateEvent(updatedEvent)
                 Log.i(TAG, "Rescheduled failed outbox event ID: ${event.id} to retry in ${delayMs / 1000}s")
+                failures++
+                lastFailureDetails = event.endpoint
             }
+        }
+
+        if (successes > 0 && prefsManager.smsSentNotifications) {
+            postSyncNotification(
+                "Local API: Queue Synced",
+                "Synced $successes event(s) successfully ($lastSuccessDetails)"
+            )
+        }
+        if (failures > 0 && prefsManager.smsFailedNotifications) {
+            postSyncNotification(
+                "Local API: Sync Deferred",
+                "Failed to dispatch $failures event(s) ($lastFailureDetails). Retrying..."
+            )
+        }
+    }
+
+    private fun postSyncNotification(title: String, body: String) {
+        try {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val openIntent = Intent(context, com.example.MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val openPendingIntent = android.app.PendingIntent.getActivity(
+                context,
+                System.currentTimeMillis().toInt() + 500,
+                openIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val accentColor = androidx.core.content.ContextCompat.getColor(context, R.color.primary_green)
+            val notif = androidx.core.app.NotificationCompat.Builder(context, "simgate_service_channel")
+                .setContentTitle(title)
+                .setContentText(body)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setColor(accentColor)
+                .setContentIntent(openPendingIntent)
+                .setAutoCancel(true)
+                .build()
+            manager.notify(System.currentTimeMillis().toInt() + 500, notif)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post sync notification", e)
         }
     }
 }

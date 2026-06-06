@@ -19,6 +19,10 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.os.VibrationEffect
+import android.media.RingtoneManager
 import com.example.MainActivity
 import com.example.R
 import com.example.data.PrefsManager
@@ -56,6 +60,7 @@ class GatewayService : Service() {
         private const val TAG = "GatewayService"
         private const val NOTIFICATION_ID = 2026
         private const val CHANNEL_ID = "simgate_service_channel"
+        private const val ALERT_CHANNEL_ID = "simgate_alerts_channel"
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = _isRunning
@@ -89,6 +94,7 @@ class GatewayService : Service() {
 
         const val ACTION_START = "com.example.START_GATEWAY"
         const val ACTION_STOP = "com.example.STOP_GATEWAY"
+        const val ACTION_FORCE_SYNC = "com.example.FORCE_SYNC"
     }
 
     data class SimInfo(val slot: Int, val carrier: String, val number: String, val subId: Int)
@@ -119,6 +125,17 @@ class GatewayService : Service() {
         if (action == ACTION_STOP) {
             stopSelf()
             return START_NOT_STICKY
+        }
+
+        if (action == ACTION_FORCE_SYNC) {
+            Log.i(TAG, "onStartCommand: Force Sync triggering Poll & OutboxFlush instantly...")
+            serviceScope.launch {
+                if (NetworkHelper.hasRealInternetConnection(applicationContext)) {
+                    doPollAndProcess()
+                    repository.processPendingOutboxEvents()
+                }
+            }
+            return START_STICKY
         }
 
         // Default: Start Gateway
@@ -158,10 +175,10 @@ class GatewayService : Service() {
                     continue
                 }
 
-                if (!isNetworkConnected()) {
+                if (!NetworkHelper.hasRealInternetConnection(applicationContext)) {
                     _onlineStatus.value = "Reconnecting"
-                    updateNotification("Offline - Waiting for network...")
-                    Log.d(TAG, "No network connection. Polling paused. Waiting ${reconnectDelay / 1000}s...")
+                    updateNotification("Reconnecting... Connection lost")
+                    Log.d(TAG, "No real internet connection. Polling paused. Waiting ${reconnectDelay / 1000}s...")
                     
                     if (prefsManager.autoReconnect) {
                         delay(reconnectDelay)
@@ -192,7 +209,7 @@ class GatewayService : Service() {
     private fun startOutboxSyncJob() {
         outboxFlushJob = serviceScope.launch(Dispatchers.IO) {
             while (isActive) {
-                if (isNetworkConnected()) {
+                if (NetworkHelper.hasRealInternetConnection(applicationContext)) {
                     repository.processPendingOutboxEvents()
                 }
                 delay(10000L) // Scan pending queue every 10 seconds
@@ -316,14 +333,15 @@ class GatewayService : Service() {
         subId: Int,
         slot: Int
     ) {
-        val retries = listOf(5000L, 15000L, 45000L, 120000L) // delay timers
+        val retries = listOf(5000L, 10000L, 20000L) // 3 retry delay timers (5s, 10s, 20s)
         var attemptCount = 0
+        val maxAttempts = 4 // 1 initial attempt + 3 retries
         var sentOk = false
         var lastErr = "Timeout or Unknown"
 
-        while (attemptCount <= 4 && !sentOk) {
+        while (attemptCount < maxAttempts && !sentOk) {
             attemptCount++
-            Log.d(TAG, "Sending message $backendId (attempt $attemptCount/4) to $recipient")
+            Log.d(TAG, "Sending message $backendId (attempt $attemptCount/$maxAttempts) to $recipient")
             
             // Call system SmsManager
             val outcome = attemptSmsTransmission(recipient, body, subId, backendId)
@@ -332,9 +350,10 @@ class GatewayService : Service() {
                 Log.d(TAG, "SmsManager transmission reported success for message $backendId")
             } else {
                 lastErr = outcome.error ?: "SmsManager error code: ${outcome.errorCode}"
-                Log.e(TAG, "SmsManager reporting failure (attempt $attemptCount/4): $lastErr")
-                if (attemptCount < 4) {
+                Log.e(TAG, "SmsManager reporting failure (attempt $attemptCount/$maxAttempts): $lastErr")
+                if (attemptCount < maxAttempts) {
                     val waitTime = retries.getOrElse(attemptCount - 1) { 5000L }
+                    Log.d(TAG, "Retrying message $backendId in ${waitTime / 1000}s (Retry #${attemptCount} of 3)...")
                     delay(waitTime)
                 }
             }
@@ -361,9 +380,8 @@ class GatewayService : Service() {
             }
         } else {
             repository.enqueueSmsFailed(backendId, recipient, lastErr)
-            if (prefsManager.smsFailedNotifications) {
-                postTransientNotification("SMS Delivery Failed", "Failed to send SMS to $recipient: $lastErr")
-            }
+            // Trigger failure vibration pop notification on phone
+            triggerFailureAlert("SMS delivery failed", "Failed to send SMS to $recipient: $lastErr")
         }
     }
 
@@ -611,6 +629,8 @@ class GatewayService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java)
+            
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "SimGate Gateway Services",
@@ -618,8 +638,20 @@ class GatewayService : Service() {
             ).apply {
                 description = "Keeps the background SimGate SMS daemon connection persistent"
             }
-            val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
+
+            val alertChannel = NotificationChannel(
+                ALERT_CHANNEL_ID,
+                "SimGate Gateway Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Alerts for SMS delivery failures and system warnings"
+                enableLights(true)
+                lightColor = android.graphics.Color.RED
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
+            }
+            manager.createNotificationChannel(alertChannel)
         }
     }
 
@@ -688,6 +720,66 @@ class GatewayService : Service() {
             manager.notify(System.currentTimeMillis().toInt(), notif)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to post transient notification", e)
+        }
+    }
+
+    private fun triggerFailureAlert(title: String, messageText: String) {
+        // 1. Post High-priority Heads-up Notification
+        try {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val openIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val openPendingIntent = PendingIntent.getActivity(
+                this,
+                System.currentTimeMillis().toInt() + 1000,
+                openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val accentColor = ContextCompat.getColor(this, R.color.primary_green)
+            
+            val vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            
+            val notif = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(messageText)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setColor(accentColor)
+                .setContentIntent(openPendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVibrate(vibrationPattern)
+                .setSound(soundUri)
+                .build()
+                
+            manager.notify(System.currentTimeMillis().toInt() + 1000, notif)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post high priority push alert", e)
+        }
+
+        // 2. Direct Hardware Vibration
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vm?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+            vibrator?.let {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val timings = longArrayOf(0, 400, 200, 400, 200, 400)
+                    val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
+                    it.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.vibrate(longArrayOf(0, 400, 200, 400, 200, 400), -1)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed manual physical device vibration prompt", e)
         }
     }
 
