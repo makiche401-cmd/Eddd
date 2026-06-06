@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -26,6 +27,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Shield
@@ -61,6 +73,334 @@ val CosmicCard = Color(0xFF1E262F)
 val CosmicGreenBorder = Color(0xFF1A3324)
 val VibrantGreen = Color(0xFF16A34A)
 val MediumGray = Color(0xFF8B949E)
+
+@Composable
+fun SimGateLogo(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.size(110.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(76.dp)) {
+            val strokeWidth = 3.5.dp.toPx()
+            val w = size.width
+            val h = size.height
+
+            // 1. Draw SIM Card Outline with Top-Right Cut corner
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(8f, 8f)
+                lineTo(w * 0.70f, 8f)
+                lineTo(w - 8f, h * 0.28f)
+                lineTo(w - 8f, h - 8f)
+                lineTo(8f, h - 8f)
+                close()
+            }
+            drawPath(
+                path = path,
+                color = VibrantGreen,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = strokeWidth,
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            )
+
+            // 2. Draw SIM Golden/Green Contacts grid outline in the center
+            val chipW = w * 0.44f
+            val chipH = h * 0.38f
+            val chipX = (w - chipW) / 2f
+            val chipY = (h - chipH) / 2f + 5f
+
+            drawRoundRect(
+                color = VibrantGreen,
+                topLeft = androidx.compose.ui.geometry.Offset(chipX, chipY),
+                size = androidx.compose.ui.geometry.Size(chipW, chipH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+            )
+
+            // Dynamic grid lines matching physical SIM chips
+            drawLine(
+                color = VibrantGreen,
+                start = androidx.compose.ui.geometry.Offset(chipX + chipW / 2f, chipY),
+                end = androidx.compose.ui.geometry.Offset(chipX + chipW / 2f, chipY + chipH),
+                strokeWidth = 1.5.dp.toPx()
+            )
+            drawLine(
+                color = VibrantGreen,
+                start = androidx.compose.ui.geometry.Offset(chipX, chipY + chipH * 0.35f),
+                end = androidx.compose.ui.geometry.Offset(chipX + chipW, chipY + chipH * 0.35f),
+                strokeWidth = 1.5.dp.toPx()
+            )
+            drawLine(
+                color = VibrantGreen,
+                start = androidx.compose.ui.geometry.Offset(chipX, chipY + chipH * 0.65f),
+                end = androidx.compose.ui.geometry.Offset(chipX + chipW, chipY + chipH * 0.65f),
+                strokeWidth = 1.5.dp.toPx()
+            )
+        }
+
+        // 3. Chat balloon overlapping the bottom right corner
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-8).dp, y = (-4).dp)
+                .size(38.dp)
+                .background(CosmicDark, shape = CircleShape)
+                .border(2.5.dp, VibrantGreen, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .background(VibrantGreen, shape = CircleShape)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IntroFeatureRow(
+    title: String,
+    description: String,
+    icon: ImageVector
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(VibrantGreen.copy(alpha = 0.12f), shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = VibrantGreen,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = description,
+                color = Color.White.copy(alpha = 0.65f),
+                fontSize = 11.sp,
+                lineHeight = 15.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun IntroScreen(
+    onContinue: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = CosmicDark
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Premium Custom SIM Card and message notification icon lockup
+            SimGateLogo()
+
+            // Header Lockup
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "SimGate ",
+                        color = VibrantGreen,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Gateway",
+                        color = Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    text = "Turn your phone into a powerful SMS gateway",
+                    color = MediumGray,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            // Beautiful borders around What SimGate does
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CosmicCard.copy(alpha = 0.3f)),
+                border = BorderStroke(1.dp, CosmicGreenBorder.copy(alpha = 0.8f)),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "What SimGate does",
+                        color = VibrantGreen,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    IntroFeatureRow(
+                        title = "Send SMS Remotely",
+                        description = "Receive SMS requests from your server and send them using this device.",
+                        icon = Icons.Default.Sms
+                    )
+                    IntroFeatureRow(
+                        title = "Receive Incoming SMS",
+                        description = "Capture incoming SMS and forward them to your backend in real-time.",
+                        icon = Icons.Default.Inbox
+                    )
+                    IntroFeatureRow(
+                        title = "Real-time Device Monitoring",
+                        description = "Report battery level, signal strength, network and status to your server.",
+                        icon = Icons.Default.CellTower
+                    )
+                    IntroFeatureRow(
+                        title = "Reliable & Secure",
+                        description = "Runs in the background securely with auto reconnect and data encryption.",
+                        icon = Icons.Default.Security
+                    )
+                    IntroFeatureRow(
+                        title = "Multi SIM Support",
+                        description = "Works with single or dual SIM devices and lets you choose the preferred SIM.",
+                        icon = Icons.Default.SdCard
+                    )
+                    IntroFeatureRow(
+                        title = "Always On",
+                        description = "Persistent foreground service keeps the gateway running 24/7.",
+                        icon = Icons.Default.Sync
+                    )
+                }
+            }
+
+            // Safe Credentials warning layout
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CosmicCard.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, CosmicGreenBorder.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Security Status indicator",
+                        tint = VibrantGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Your credentials are safe and stored securely on this device.",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Action Button
+            Button(
+                onClick = onContinue,
+                colors = ButtonDefaults.buttonColors(containerColor = VibrantGreen),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("onboarding_continue_button"),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Continue",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Continue action icon",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            // Unobtrusive Dots navigation progress row
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(VibrantGreen, shape = CircleShape)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(Color(0xFF242F3D), shape = CircleShape)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(Color(0xFF242F3D), shape = CircleShape)
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun OnboardingScreen(
@@ -615,7 +955,7 @@ fun PermissionsScreen(
     var hasPhoneState by remember { mutableStateOf(false) }
     var hasNotif by remember { mutableStateOf(false) }
     var isBatteryOptDisabled by remember { mutableStateOf(false) }
-    var hasAutoStartConfigured by remember { mutableStateOf(false) }
+    var hasAutoStartConfigured by remember { mutableStateOf(viewModel.prefsManager.hasAutoStartConfigured) }
 
     var showAutoStartDialog by remember { mutableStateOf(false) }
 
@@ -637,6 +977,8 @@ fun PermissionsScreen(
         } else {
             true
         }
+        
+        hasAutoStartConfigured = viewModel.prefsManager.hasAutoStartConfigured
     }
 
     LaunchedEffect(Unit) {
@@ -1033,13 +1375,48 @@ fun PermissionsScreen(
                 onOpenSettings = {
                     showAutoStartDialog = false
                     hasAutoStartConfigured = true
-                    try {
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.parse("package:${context.packageName}")
+                    viewModel.prefsManager.hasAutoStartConfigured = true
+                    
+                    var launched = false
+                    val autoStartComponents = listOf(
+                        ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+                        ComponentName("com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity"),
+                        ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"),
+                        ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+                        ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),
+                        ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"),
+                        ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"),
+                        ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"),
+                        ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"),
+                        ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
+                        ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity"),
+                        ComponentName("com.asus.mobilemanager", "com.asus.mobilemanager.autostart.AutoStartActivity")
+                    )
+                    
+                    for (component in autoStartComponents) {
+                        try {
+                            val intent = Intent().apply {
+                                setComponent(component)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            launched = true
+                            break
+                        } catch (e: Exception) {
+                            // Try next OEM component
                         }
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Settings opened", Toast.LENGTH_SHORT).show()
+                    }
+                    
+                    if (!launched) {
+                        try {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Please enable Auto-start for SimGate in system settings", Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             )

@@ -41,7 +41,16 @@ class PrefsManager(private val context: Context) {
         private const val KEY_NOTIF_SMS_SENT = "setting_notif_sms_sent"
         private const val KEY_NOTIF_SMS_FAILED = "setting_notif_sms_failed"
         private const val KEY_NOTIF_SMS_RECV = "setting_notif_sms_recv"
+        private const val KEY_HAS_SEEN_WELCOME = "has_seen_welcome"
     }
+
+    var hasSeenWelcome: Boolean
+        get() = prefs.getBoolean(KEY_HAS_SEEN_WELCOME, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_SEEN_WELCOME, value).apply()
+
+    var hasAutoStartConfigured: Boolean
+        get() = prefs.getBoolean("has_autostart_configured", false)
+        set(value) = prefs.edit().putBoolean("has_autostart_configured", value).apply()
 
     var pollInterval: Int
         get() = prefs.getInt(KEY_POLL_INTERVAL, 5)

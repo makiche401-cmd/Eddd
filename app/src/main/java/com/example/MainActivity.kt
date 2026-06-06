@@ -22,11 +22,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.example.ui.screens.*
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.GatewayViewModel
 
 enum class AppScreen {
+    Intro,
     Permissions,
     Onboarding,
     Dashboard
@@ -51,12 +55,15 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val isPaired by viewModel.isPaired.collectAsStateWithLifecycle()
 
-                var currentScreen by remember { mutableStateOf(AppScreen.Permissions) }
+                var currentScreen by remember { mutableStateOf(AppScreen.Intro) }
                 var activeTab by remember { mutableStateOf(DashboardTab.Home) }
 
-                // Periodic permission check
+                // Periodic permission check e.g. onResume or state change
                 fun refreshNavigationFlow() {
-                    currentScreen = if (!viewModel.hasPermissions(context)) {
+                    val hasSeenWelcome = viewModel.prefsManager.hasSeenWelcome
+                    currentScreen = if (!hasSeenWelcome) {
+                        AppScreen.Intro
+                    } else if (!viewModel.hasPermissions(context)) {
                         AppScreen.Permissions
                     } else if (!isPaired) {
                         AppScreen.Onboarding
@@ -69,11 +76,33 @@ class MainActivity : ComponentActivity() {
                     refreshNavigationFlow()
                 }
 
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            refreshNavigationFlow()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = CosmicDark
                 ) {
                     when (currentScreen) {
+                        AppScreen.Intro -> {
+                            IntroScreen(
+                                onContinue = {
+                                    viewModel.prefsManager.hasSeenWelcome = true
+                                    refreshNavigationFlow()
+                                }
+                            )
+                        }
+
                         AppScreen.Permissions -> {
                             PermissionsScreen(
                                 viewModel = viewModel,
